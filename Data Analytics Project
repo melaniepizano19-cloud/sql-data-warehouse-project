@@ -1,0 +1,64 @@
+-- Change over time analysis
+-- Analyze sales performance over time
+SELECT
+DATETRUNC(month, order_date) as order_date,
+SUM(sales_amount) as total_sales,
+COUNT(DISTINCT customer_key) as total_customers,
+SUM(quantity) as total_quantity
+FROM gold.fact_sales
+WHERE order_date IS NOT NULL
+GROUP BY DATETRUNC(month, order_date)
+ORDER BY DATETRUNC(month, order_date)
+
+-- Cumulative analysis
+-- Calculate the total sales per month and the running total of sales overtime
+SELECT 
+order_date,
+total_sales,
+SUM(total_sales) OVER (ORDER BY order_date) AS running_total_sales
+FROM 
+(
+SELECT 
+DATETRUNC(month, order_date) AS order_date,
+SUM(sales_amount) AS total_sales
+FROM gold.fact_sales
+WHERE order_date IS NOT NULL
+GROUP BY DATETRUNC(month, order_date)
+) t
+
+-- Performance analysis
+-- Analyze the yearly performance of products by comparing each product's sales to both its avg sales performance and the previous year's sales
+WITH yearly_product_sales AS (
+SELECT 
+YEAR(f.order_date) AS order_year,
+p.product_name,
+SUM(f.sales_amount) AS current_sales
+FROM gold.fact_sales as f
+LEFT JOIN gold.dim_products AS p
+ON f.product_key = p.product_key
+WHERE f.order_date IS NOT NULL
+GROUP BY YEAR(f.order_date), p.product_name
+)
+SELECT 
+order_year,
+product_name,
+current_sales,
+AVG(current_sales) OVER (PARTITION BY product_name) AS avg_sales,
+current_sales - AVG(current_sales) OVER (PARTITION BY product_name)  AS diff_avg,
+CASE WHEN current_sales - AVG(current_sales) OVER (PARTITION BY product_name) > 0 THEN 'Above avg'
+	 WHEN current_sales - AVG(current_sales) OVER (PARTITION BY product_name) < 0 THEN 'Below avg'
+	 ELSE 'Avg'
+END avg_change,
+LAG(current_sales) OVER (PARTITION BY product_name ORDER BY order_year) AS prev_year_sales,
+current_sales - LAG(current_sales) OVER (PARTITION BY product_name ORDER BY order_year) AS diff_prev_year,
+CASE WHEN current_sales - LAG(current_sales) OVER (PARTITION BY product_name ORDER BY order_year)  > 0 THEN 'Increase'
+	 WHEN current_sales - LAG(current_sales) OVER (PARTITION BY product_name ORDER BY order_year)  < 0 THEN 'Decrease'
+	 ELSE 'No Change'
+END prev_year_change
+FROM yearly_product_sales
+ORDER BY product_name, order_year
+
+-- Part to whole analysis
+-- Data segmentation
+-- Build customers report
+-- Buld Products report
