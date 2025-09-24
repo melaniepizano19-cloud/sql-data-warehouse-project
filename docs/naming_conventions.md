@@ -1,11 +1,11 @@
 Defining naming conventions:
 
 I will be using lowercase snake case 
-- Bronze: <sourcesystem>_<entity>
-- Silver: <sourcesystem>_<entity>
-- Gold: <category>_<entity>
+- Bronze: sourcesystem_entity
+- Silver: sourcesystem_entity
+- Gold: category_entity
 - Categories as a prefix 
 
 Columns: 
-- Primary keys will have the <tablename>_key
+- Primary keys will have the tablename_key
 - Technical columns will have prefix dwh_
